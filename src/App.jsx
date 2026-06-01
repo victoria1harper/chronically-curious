@@ -1,7 +1,10 @@
-import { useState, useEffect, useCallback, useReducer, useRef } from "react";
+import { useState, useEffect, useCallback, useReducer, useRef, createContext, useContext } from "react";
 
-// ── palette ──────────────────────────────────────────────────────────────────
-const C = {
+// ── theme ─────────────────────────────────────────────────────────────────────
+const ThemeContext = createContext(null);
+const useTheme = () => useContext(ThemeContext);
+
+const makeTheme = (dark) => dark ? {
   bg:       "#0F0F0F",
   surface:  "#1A1A1A",
   card:     "#222222",
@@ -27,7 +30,37 @@ const C = {
   good:     "#4ECFA8",
   warn:     "#D4A847",
   danger:   "#E85A5A",
+} : {
+  bg:       "#F2F0EB",
+  surface:  "#E8E5DF",
+  card:     "#FFFFFF",
+  border:   "#D4D0C8",
+  muted:    "#C4C0B8",
+  textPri:  "#1A1916",
+  textSec:  "#6B6860",
+  textTer:  "#9A9790",
+  pain:     "#C8521A",
+  painBg:   "#FDE8DE",
+  sleep:    "#6B5FD4",
+  sleepBg:  "#EAE7F8",
+  alc:      "#A07810",
+  alcBg:    "#FBF0D0",
+  food:     "#4A8F20",
+  foodBg:   "#E4F2D8",
+  screen:   "#2B7EC8",
+  screenBg: "#DCEcF8",
+  ex:       "#1A9F78",
+  exBg:     "#D4F2E8",
+  custom:   "#9848B4",
+  customBg: "#F0E0F8",
+  good:     "#1A9F78",
+  warn:     "#A07810",
+  danger:   "#C83030",
 };
+
+// Legacy: components use C directly — we keep C as a module-level ref
+// updated by the ThemeProvider before each render
+let C = makeTheme(true);
 
 const today = () => new Date().toISOString().slice(0, 10);
 const fmt = (d) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
@@ -730,9 +763,6 @@ const TodayPage = ({ data, trackers, onLog, date, setDate }) => {
   const total = active.length;
   const pct = total ? Math.round((doneCount / total) * 100) : 0;
 
-  const tripleX = active.filter(t => t.frequency === "3x");
-  const eod = active.filter(t => t.frequency !== "3x");
-
   return (
     <div style={{ flex: 1, overflowY: "auto", paddingBottom: 90 }}>
       {/* header */}
@@ -767,25 +797,12 @@ const TodayPage = ({ data, trackers, onLog, date, setDate }) => {
       </div>
 
       <div style={{ padding: "14px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
-        {tripleX.length > 0 && (
-          <>
-            <div style={{ fontSize: 10, color: C.textTer, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600 }}>Check-ins</div>
-            {tripleX.map(t => (
-              t.type === "pain_special"
-                ? <PainCard key={t.id} tracker={t} dayData={dayData} onLog={onLog} />
-                : <TrackerCard key={t.id} tracker={t} dayData={dayData} onLog={onLog} />
-            ))}
-          </>
-        )}
-        {eod.length > 0 && (
-          <>
-            <div style={{ fontSize: 10, color: C.textTer, textTransform: "uppercase", letterSpacing: "0.08em", fontWeight: 600, marginTop: 4 }}>End of day</div>
-            {eod.map(t =>
-            t.id === "exercise"
-              ? <ExerciseCard key={t.id} tracker={t} dayData={dayData} onLog={onLog} />
-              : <TrackerCard  key={t.id} tracker={t} dayData={dayData} onLog={onLog} />
-          )}
-          </>
+        {active.map(t =>
+          t.type === "pain_special"
+            ? <PainCard     key={t.id} tracker={t} dayData={dayData} onLog={onLog} />
+            : t.id === "exercise"
+            ? <ExerciseCard key={t.id} tracker={t} dayData={dayData} onLog={onLog} />
+            : <TrackerCard  key={t.id} tracker={t} dayData={dayData} onLog={onLog} />
         )}
       </div>
     </div>
@@ -1473,7 +1490,7 @@ const NEW_TRACKER_TEMPLATE = () => ({
   frequency: "eod", metrics: [], active: true,
 });
 
-const SettingsPage = ({ trackers, setTrackers, onExport, onClear, reminders, setReminders }) => {
+const SettingsPage = ({ trackers, setTrackers, onExport, onClear, reminders, setReminders, darkMode, setDarkMode }) => {
   const [tab, setTab]             = useState("trackers");
   const [editingTracker, setEditingTracker] = useState(null);  // null | tracker object (for new: has isNew:true flag)
 
@@ -1507,19 +1524,39 @@ const SettingsPage = ({ trackers, setTrackers, onExport, onClear, reminders, set
 
   return (
     <div style={{ flex: 1, overflowY: "auto", paddingBottom: 90 }}>
-      <div style={{ padding: "14px 16px 12px", background: C.surface, borderBottom: `1px solid ${C.border}` }}>
+      <div style={{ padding: "14px 16px 12px", background: C.surface, borderBottom: "1px solid " + C.border }}>
         <div style={{ fontSize: 10, color: C.textTer, marginBottom: 3, fontFamily: "DM Mono, monospace", letterSpacing: "0.1em" }}>CHRONICALLY CURIOUS</div>
         <div style={{ fontSize: 22, fontWeight: 700, color: C.textPri, marginBottom: 10 }}>Settings</div>
         <div style={{ display: "flex", gap: 6 }}>
           {["trackers","reminders","data"].map(t => (
             <button key={t} onClick={() => setTab(t)}
-              style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: `1px solid ${tab === t ? C.screen : C.border}`, background: tab === t ? C.screenBg : C.card, color: tab === t ? C.screen : C.textSec, fontSize: 11, cursor: "pointer", fontWeight: tab === t ? 700 : 400, textTransform: "capitalize" }}>
+              style={{ flex: 1, padding: "6px 0", borderRadius: 8, border: "1px solid " + (tab === t ? C.screen : C.border), background: tab === t ? C.screenBg : C.card, color: tab === t ? C.screen : C.textSec, fontSize: 11, cursor: "pointer", fontWeight: tab === t ? 700 : 400, textTransform: "capitalize" }}>
               {t}
             </button>
           ))}
         </div>
       </div>
       <div style={{ padding: "14px 14px" }}>
+        {tab === "display" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ background: C.card, borderRadius: 12, border: "1px solid " + C.border, overflow: "hidden" }}>
+              <div style={{ display: "flex", alignItems: "center", padding: "14px 16px" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 14, fontWeight: 600, color: C.textPri }}>
+                    {darkMode ? "🌙 Dark mode" : "☀️ Light mode"}
+                  </div>
+                  <div style={{ fontSize: 11, color: C.textTer, marginTop: 3 }}>
+                    {darkMode ? "Switch to light mode" : "Switch to dark mode"}
+                  </div>
+                </div>
+                <Toggle on={darkMode} onToggle={() => setDarkMode(d => !d)} />
+              </div>
+            </div>
+            <div style={{ fontSize: 11, color: C.textTer }}>
+              Your preference is saved and will be remembered next time you open the app.
+            </div>
+          </div>
+        )}
         {tab === "trackers" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
             {trackers.map(t => (
@@ -1546,6 +1583,13 @@ const SettingsPage = ({ trackers, setTrackers, onExport, onClear, reminders, set
         {tab === "data" && (
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ background: C.card, borderRadius: 12, border: `1px solid ${C.border}`, overflow: "hidden" }}>
+              <div style={{ display: "flex", alignItems: "center", padding: "12px 14px", borderBottom: `1px solid ${C.border}` }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, color: C.textPri }}>{darkMode ? "🌙 Dark mode" : "☀️ Light mode"}</div>
+                  <div style={{ fontSize: 10, color: C.textTer, marginTop: 2 }}>Tap to switch</div>
+                </div>
+                <Toggle on={darkMode} onToggle={() => setDarkMode(d => !d)} />
+              </div>
               <div style={{ display: "flex", alignItems: "center", padding: "12px 14px", borderBottom: `1px solid ${C.border}` }}>
                 <div style={{ flex: 1 }}><div style={{ fontSize: 13, color: C.textPri }}>Export data</div><div style={{ fontSize: 10, color: C.textTer }}>Download entries as JSON</div></div>
                 <button onClick={onExport} style={{ background: C.screenBg, border: `1px solid ${C.screen}44`, color: C.screen, borderRadius: 8, padding: "6px 14px", cursor: "pointer", fontSize: 12, fontWeight: 600 }}>Export</button>
@@ -1589,12 +1633,16 @@ export default function App() {
     return [...merged, ...customTrackers];
   });
   const [reminders, setReminders] = useState(stored.reminders || {});
+  const [darkMode,  setDarkMode]  = useState(stored.darkMode !== false); // default dark
   const [tab,       setTab]       = useState("today");
   const [dateView,  setDateView]  = useState(today());
-  const [modal,     setModal]     = useState(null); // { type: "pain"|"generic"|"pain_summary", tracker, slot, existing }
+  const [modal,     setModal]     = useState(null);
   const [clearConf, setClearConf] = useState(false);
 
-  useEffect(() => { save({ entries: data, trackers, reminders }); }, [data, trackers, reminders]);
+  // Update the module-level C ref whenever darkMode changes
+  C = makeTheme(darkMode);
+
+  useEffect(() => { save({ entries: data, trackers, reminders, darkMode }); }, [data, trackers, reminders, darkMode]);
 
   const handleLog = useCallback((tracker, slot, existing, forceType) => {
     if (tracker.type === "pain_special" || forceType === "pain_summary") {
@@ -1665,18 +1713,19 @@ export default function App() {
   ];
 
   return (
-    <div style={{ fontFamily: "'DM Sans', sans-serif", background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column", maxWidth: 480, margin: "0 auto" }}>
+    <ThemeContext.Provider value={{ darkMode, setDarkMode }}>
+    <div style={{ fontFamily: "'DM Sans', sans-serif", background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column", maxWidth: 480, margin: "0 auto", transition: "background 0.3s" }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono&display=swap" rel="stylesheet" />
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: "100vh", overflowX: "hidden" }}>
         {tab === "today"    && <TodayPage    data={data} trackers={trackers} onLog={handleLog} date={dateView} setDate={setDateView} />}
         {tab === "trends"   && <TrendsPage   data={data} trackers={trackers} />}
         {tab === "history"  && <HistoryPage  data={data} trackers={trackers} />}
-        {tab === "settings" && <SettingsPage trackers={trackers} setTrackers={setTrackers} onExport={handleExport} onClear={handleClear} reminders={reminders} setReminders={setReminders} />}
+        {tab === "settings" && <SettingsPage trackers={trackers} setTrackers={setTrackers} onExport={handleExport} onClear={handleClear} reminders={reminders} setReminders={setReminders} darkMode={darkMode} setDarkMode={setDarkMode} />}
       </div>
 
       {/* bottom nav */}
-      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: C.surface, borderTop: `1px solid ${C.border}`, display: "flex", zIndex: 50 }}>
+      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: C.surface, borderTop: "1px solid " + C.border, display: "flex", zIndex: 50 }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)}
             style={{ flex: 1, padding: "10px 0 14px", background: "transparent", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
@@ -1688,18 +1737,18 @@ export default function App() {
       </div>
 
       {/* modals */}
-      {modal?.type === "exercise" && (
+      {modal && modal.type === "exercise" && (
         <ExerciseModal existing={modal.existing} onSave={handleSaveExercise} onClose={() => setModal(null)} />
       )}
-      {modal?.type === "pain" && (
+      {modal && modal.type === "pain" && (
         <PainModal slot={modal.slot} existing={modal.existing} onSave={handleSavePain} onClose={() => setModal(null)} />
       )}
-      {modal?.type === "pain_summary" && (
+      {modal && modal.type === "pain_summary" && (
         <PainSummaryModal tracker={modal.tracker} dayData={data[dateView] || {}}
           onLogSlot={(slot, existing) => setModal({ type: "pain", tracker: modal.tracker, slot, existing })}
           onClose={() => setModal(null)} />
       )}
-      {modal?.type === "generic" && (
+      {modal && modal.type === "generic" && (
         <LogModal tracker={modal.tracker} slot={modal.slot} existing={modal.existing} onSave={handleSaveGeneric} onClose={() => setModal(null)} />
       )}
 
@@ -1711,11 +1760,12 @@ export default function App() {
             <div style={{ fontSize: 13, color: C.textSec, marginBottom: 20 }}>This permanently erases all logged entries. Cannot be undone.</div>
             <div style={{ display: "flex", gap: 8 }}>
               <button onClick={handleClear} style={{ flex: 1, padding: 12, borderRadius: 10, background: C.danger, border: "none", color: "#fff", fontSize: 14, cursor: "pointer", fontWeight: 700 }}>Delete everything</button>
-              <button onClick={() => setClearConf(false)} style={{ flex: 1, padding: 12, borderRadius: 10, background: C.card, border: `1px solid ${C.border}`, color: C.textSec, fontSize: 14, cursor: "pointer" }}>Cancel</button>
+              <button onClick={() => setClearConf(false)} style={{ flex: 1, padding: 12, borderRadius: 10, background: C.card, border: "1px solid " + C.border, color: C.textSec, fontSize: 14, cursor: "pointer" }}>Cancel</button>
             </div>
           </div>
         </div>
       )}
     </div>
+    </ThemeContext.Provider>
   );
 }
