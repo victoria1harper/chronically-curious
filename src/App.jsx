@@ -101,6 +101,11 @@ const PAIN_AREA_LOCATIONS = {
     "Upper chest", "Lower chest", "Left ribs", "Right ribs",
     "Upper abdomen", "Lower abdomen", "Left side", "Right side", "Other",
   ],
+  pelvic: [
+    "Upper abdomen", "Lower abdomen", "Left side", "Right side",
+    "Pelvic floor", "Lower back / kidney area", "Bladder",
+    "Ovaries / uterus", "Bowel / digestive", "Radiating to legs", "Other",
+  ],
 };
 const getPainLocations = (area) => PAIN_AREA_LOCATIONS[area] || PAIN_AREA_LOCATIONS.back;
 
@@ -1641,19 +1646,21 @@ const SettingsPage = ({ trackers, setTrackers, onExport, onClear, reminders, set
 
 // ── PAIN BODY AREAS for onboarding ───────────────────────────────────────────
 const BODY_AREAS = [
-  { id: "back",   label: "Back",   icon: "🫀", desc: "Spine, shoulders, neck, hips" },
-  { id: "head",   label: "Head",   icon: "🧠", desc: "Headaches, migraines, jaw" },
-  { id: "arms",   label: "Arms",   icon: "💪", desc: "Shoulders, elbows, wrists, hands" },
-  { id: "legs",   label: "Legs",   icon: "🦵", desc: "Hips, knees, ankles, feet" },
-  { id: "torso",  label: "Torso",  icon: "🫁", desc: "Chest, abdomen, ribs, sides" },
+  { id: "back",   label: "Back",               icon: "🫀", desc: "Spine, shoulders, neck, hips" },
+  { id: "head",   label: "Head",               icon: "🧠", desc: "Headaches, migraines, jaw" },
+  { id: "arms",   label: "Arms",               icon: "💪", desc: "Shoulders, elbows, wrists, hands" },
+  { id: "legs",   label: "Legs",               icon: "🦵", desc: "Hips, knees, ankles, feet" },
+  { id: "torso",  label: "Torso",              icon: "🫁", desc: "Chest, abdomen, ribs, sides" },
+  { id: "pelvic", label: "Pelvic & abdominal", icon: "🩺", desc: "Digestive, reproductive, urinary, kidney" },
 ];
 
 const PAIN_AREA_LABELS = {
-  back:  "Back pain",
-  head:  "Head pain",
-  arms:  "Arm pain",
-  legs:  "Leg pain",
-  torso: "Torso pain",
+  back:   "Back pain",
+  head:   "Head pain",
+  arms:   "Arm pain",
+  legs:   "Leg pain",
+  torso:  "Torso pain",
+  pelvic: "Pelvic & abdominal pain",
 };
 
 // ── ONBOARDING SCREEN ────────────────────────────────────────────────────────
