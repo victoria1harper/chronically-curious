@@ -79,10 +79,30 @@ const PAIN_LEVELS = [
 ];
 const PAIN_LEVEL_COLOR = { mild: C.alc, annoying: "#E8A84A", moderate: C.pain, severe: "#C0392B" };
 
-const PAIN_LOCATIONS = [
-  "Neck / cervical", "Upper back", "Mid back", "Lower back",
-  "Left shoulder", "Right shoulder", "Hip flexors", "Glutes", "Other",
-];
+const PAIN_AREA_LOCATIONS = {
+  back: [
+    "Neck / cervical", "Upper back", "Mid back", "Lower back",
+    "Left shoulder", "Right shoulder", "Hip flexors", "Glutes", "Other",
+  ],
+  head: [
+    "Forehead", "Right temple", "Left temple", "Back of head",
+    "Behind the eyes", "Jaw / TMJ", "Neck base", "Other",
+  ],
+  arms: [
+    "Right shoulder", "Left shoulder", "Right elbow", "Left elbow",
+    "Right wrist", "Left wrist", "Right hand", "Left hand", "Other",
+  ],
+  legs: [
+    "Right hip", "Left hip", "Right knee", "Left knee",
+    "Right ankle", "Left ankle", "Right foot", "Left foot",
+    "Right shin / calf", "Left shin / calf", "Other",
+  ],
+  torso: [
+    "Upper chest", "Lower chest", "Left ribs", "Right ribs",
+    "Upper abdomen", "Lower abdomen", "Left side", "Right side", "Other",
+  ],
+};
+const getPainLocations = (area) => PAIN_AREA_LOCATIONS[area] || PAIN_AREA_LOCATIONS.back;
 
 // ── default trackers ─────────────────────────────────────────────────────────
 const DEFAULT_TRACKERS = [
@@ -107,10 +127,10 @@ const DEFAULT_TRACKERS = [
     frequency: "eod",
     metrics: [
       { id: "type",      label: "Type",           type: "select",
-        options: ["Pilates", "Running", "Walking", "Stretching", "Cycling", "HIIT", "Sports", "Other"] },
+        options: ["Pilates", "Running", "Walking", "Stretching", "Cycling", "Strength training", "Yoga", "Sports", "Other"] },
       { id: "intensity", label: "Intensity",      type: "select",
         options: ["Light", "Moderate", "Hard", "Max effort"] },
-      { id: "duration",  label: "Duration (min)", type: "number", min: 0, max: 300, step: 5 },
+      { id: "duration",  label: "Duration (hrs)", type: "number", min: 0, max: 8, step: 0.5 },
     ],
   },
   {
@@ -142,9 +162,9 @@ const DEFAULT_TRACKERS = [
     metrics: [
       { id: "medication_doses", label: "Medication (doses today)", type: "number", min: 0, max: 20, step: 1 },
       { id: "treatments", label: "Treatment used", type: "multiselect",
-        options: ["Ibuprofen", "Paracetamol", "Naproxen", "Muscle relaxant", "Prescribed medication",
-                  "Heat pack", "Ice pack", "Massage", "Physiotherapy", "Chiropractor",
-                  "Stretching / yoga", "TENS machine", "Rest", "Other"] },
+        options: ["Ibuprofen", "Paracetamol", "Melatonin", "Magnesium",
+                  "Heat pack", "Ice pack", "Massage", "Qui massage", "Physiotherapy", "Chiropractor",
+                  "Stretching / yoga", "Other"] },
     ],
   },
 ];
@@ -251,7 +271,8 @@ const MetricInput = ({ metric, value, onChange, color }) => {
 };
 
 // ── PAIN MODAL (special multi-location) ─────────────────────────────────────
-const PainModal = ({ slot, existing, onSave, onClose }) => {
+const PainModal = ({ slot, existing, onSave, onClose, painArea }) => {
+  const PAIN_LOCATIONS = getPainLocations(painArea || "back");
   // entries = array of { location, level }
   const [entries, setEntries] = useState(existing?.painEntries || []);
   const [note, setNote] = useState(existing?.note || "");
@@ -449,7 +470,7 @@ const PainCard = ({ tracker, dayData, onLog }) => {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <span style={{ fontSize: 20 }}>🫀</span>
-          <span style={{ fontSize: 14, fontWeight: 700, color: C.textPri }}>Back pain</span>
+          <span style={{ fontSize: 14, fontWeight: 700, color: C.textPri }}>{tracker.label}</span>
         </div>
         <Badge color={allDone ? C.good : anyDone ? C.screen : C.warn} bg={allDone ? C.exBg : anyDone ? C.screenBg : C.alcBg}>
           {doneCount} / {slots.length}
@@ -609,12 +630,12 @@ const ExerciseModal = ({ existing, onSave, onClose }) => {
               ))}
             </div>
 
-            <div style={{ fontSize: 11, color: C.textTer, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Duration (min)</div>
+            <div style={{ fontSize: 11, color: C.textTer, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 8 }}>Duration (hrs)</div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
-              <button onClick={() => setDraft(d => ({ ...d, duration: Math.max(0, (d.duration || 0) - 5) }))}
+              <button onClick={() => setDraft(d => ({ ...d, duration: Math.max(0, Math.round(((d.duration || 0) - 0.5) * 10) / 10) }))}
                 style={{ width: 38, height: 38, borderRadius: 8, border: `1px solid ${C.border}`, background: C.card, color: C.textSec, fontSize: 22, cursor: "pointer" }}>−</button>
-              <span style={{ flex: 1, textAlign: "center", fontSize: 24, fontWeight: 700, color: C.textPri }}>{draft.duration !== null && draft.duration !== undefined ? draft.duration : "—"}</span>
-              <button onClick={() => setDraft(d => ({ ...d, duration: (d.duration || 0) + 5 }))}
+              <span style={{ flex: 1, textAlign: "center", fontSize: 24, fontWeight: 700, color: C.textPri }}>{draft.duration !== null && draft.duration !== undefined ? draft.duration + "h" : "—"}</span>
+              <button onClick={() => setDraft(d => ({ ...d, duration: Math.round(((d.duration || 0) + 0.5) * 10) / 10 }))}
                 style={{ width: 38, height: 38, borderRadius: 8, border: `1px solid ${C.border}`, background: C.card, color: C.textSec, fontSize: 22, cursor: "pointer" }}>+</button>
             </div>
 
@@ -659,7 +680,7 @@ const ExerciseCard = ({ tracker, dayData, onLog }) => {
   const sessions = entry?.sessions || [];
   const done     = sessions.length > 0;
 
-  const summaryLine = (s) => [s.type, s.intensity, s.duration ? `${s.duration}m` : null].filter(Boolean).join(" · ");
+  const summaryLine = (s) => [s.type, s.intensity, s.duration ? `${s.duration}h` : null].filter(Boolean).join(" · ");
 
   return (
     <div onClick={() => onLog(tracker, null, entry, "exercise")}
@@ -742,61 +763,68 @@ const PainSummaryModal = ({ tracker, dayData, onLogSlot, onClose }) => {
 };
 
 // ── TODAY PAGE ───────────────────────────────────────────────────────────────
-const TodayPage = ({ data, trackers, onLog, date, setDate }) => {
+const TodayPage = ({ data, trackers, onLog, date, setDate, userName }) => {
   const dayData = data[date] || {};
   const active = trackers.filter(t => t.active !== false);
+  const isToday = date === today();
 
   const isDone = (t) => {
     const entries = dayData[t.id] || {};
     if (t.type === "pain_special") {
       return t.times.every(s => {
         const e = entries[s];
-        return e && (e.noPain || e.painEntries?.length > 0);
+        return e && (e.noPain || e.painEntries && e.painEntries.length > 0);
       });
     }
-    if (t.id === "exercise") return (entries.sessions?.length > 0);
+    if (t.id === "exercise") return (entries.sessions && entries.sessions.length > 0);
     const e = entries.main;
-    return e && t.metrics.some(m => e.metrics?.[m.id] != null && e.metrics[m.id] !== "");
+    return e && t.metrics.some(m => e.metrics && e.metrics[m.id] != null && e.metrics[m.id] !== "");
   };
 
   const doneCount = active.filter(isDone).length;
   const total = active.length;
   const pct = total ? Math.round((doneCount / total) * 100) : 0;
+  const greeting = isToday ? getGreeting(userName, data, trackers) : null;
 
   return (
     <div style={{ flex: 1, overflowY: "auto", paddingBottom: 90 }}>
-      {/* header */}
-      <div style={{ padding: "14px 16px 12px", background: C.surface, borderBottom: `1px solid ${C.border}` }}>
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
+      <div style={{ padding: "14px 16px 12px", background: C.surface, borderBottom: "1px solid " + C.border }}>
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: greeting ? 8 : 10 }}>
           <div>
             <div style={{ fontSize: 10, color: C.textTer, marginBottom: 3, fontFamily: "DM Mono, monospace", letterSpacing: "0.1em" }}>CHRONICALLY CURIOUS</div>
             <div style={{ fontSize: 22, fontWeight: 700, color: C.textPri, lineHeight: 1 }}>
-              {date === today() ? "Today" : fmt(date)}
+              {isToday ? "Today" : fmt(date)}
             </div>
-            {date === today() && <div style={{ fontSize: 11, color: C.textTer, marginTop: 3 }}>{fmt(date)}</div>}
+            {isToday && <div style={{ fontSize: 11, color: C.textTer, marginTop: 3 }}>{fmt(date)}</div>}
           </div>
           <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
             <button onClick={() => { const d = new Date(date); d.setDate(d.getDate() - 1); setDate(d.toISOString().slice(0, 10)); }}
-              style={{ width: 32, height: 32, borderRadius: 8, background: C.card, border: `1px solid ${C.border}`, color: C.textSec, cursor: "pointer", fontSize: 14 }}>←</button>
-            {date !== today() && (
+              style={{ width: 32, height: 32, borderRadius: 8, background: C.card, border: "1px solid " + C.border, color: C.textSec, cursor: "pointer", fontSize: 14 }}>←</button>
+            {!isToday && (
               <button onClick={() => setDate(today())}
-                style={{ padding: "0 10px", height: 32, borderRadius: 8, background: C.card, border: `1px solid ${C.screen + "55"}`, color: C.screen, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Now</button>
+                style={{ padding: "0 10px", height: 32, borderRadius: 8, background: C.card, border: "1px solid " + C.screen + "55", color: C.screen, cursor: "pointer", fontSize: 11, fontWeight: 600 }}>Now</button>
             )}
-            <button onClick={() => { const d = new Date(date); d.setDate(d.getDate() + 1); if (d.toISOString().slice(0, 10) <= today()) setDate(d.toISOString().slice(0, 10)); }}
-              style={{ width: 32, height: 32, borderRadius: 8, background: C.card, border: `1px solid ${C.border}`, color: date === today() ? C.muted : C.textSec, cursor: date === today() ? "default" : "pointer", fontSize: 14 }}>→</button>
+            <button onClick={() => { const d = new Date(date); d.setDate(d.getDate() + 1); if (d.toISOString().slice(0,10) <= today()) setDate(d.toISOString().slice(0,10)); }}
+              style={{ width: 32, height: 32, borderRadius: 8, background: C.card, border: "1px solid " + C.border, color: isToday ? C.muted : C.textSec, cursor: isToday ? "default" : "pointer", fontSize: 14 }}>→</button>
           </div>
         </div>
 
-        {/* progress */}
+        {greeting && (
+          <div style={{ fontSize: 12, color: C.textSec, lineHeight: 1.5, marginBottom: 10, paddingBottom: 10, borderBottom: "1px solid " + C.border }}>
+            {greeting}
+          </div>
+        )}
+
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ flex: 1, height: 5, background: C.muted, borderRadius: 3 }}>
-            <div style={{ width: `${pct}%`, height: 5, borderRadius: 3, background: pct === 100 ? C.good : C.screen, transition: "width 0.4s ease" }} />
+            <div style={{ width: pct + "%", height: 5, borderRadius: 3, background: pct === 100 ? C.good : C.screen, transition: "width 0.4s ease" }} />
           </div>
           <div style={{ fontSize: 11, color: C.textSec, minWidth: 55, textAlign: "right" }}>{doneCount}/{total} done</div>
         </div>
       </div>
 
       <div style={{ padding: "14px 14px", display: "flex", flexDirection: "column", gap: 10 }}>
+        {isToday && <WeeklyReflection data={data} />}
         {active.map(t =>
           t.type === "pain_special"
             ? <PainCard     key={t.id} tracker={t} dayData={dayData} onLog={onLog} />
@@ -1611,43 +1639,268 @@ const SettingsPage = ({ trackers, setTrackers, onExport, onClear, reminders, set
   );
 };
 
+// ── PAIN BODY AREAS for onboarding ───────────────────────────────────────────
+const BODY_AREAS = [
+  { id: "back",   label: "Back",   icon: "🫀", desc: "Spine, shoulders, neck, hips" },
+  { id: "head",   label: "Head",   icon: "🧠", desc: "Headaches, migraines, jaw" },
+  { id: "arms",   label: "Arms",   icon: "💪", desc: "Shoulders, elbows, wrists, hands" },
+  { id: "legs",   label: "Legs",   icon: "🦵", desc: "Hips, knees, ankles, feet" },
+  { id: "torso",  label: "Torso",  icon: "🫁", desc: "Chest, abdomen, ribs, sides" },
+];
+
+const PAIN_AREA_LABELS = {
+  back:  "Back pain",
+  head:  "Head pain",
+  arms:  "Arm pain",
+  legs:  "Leg pain",
+  torso: "Torso pain",
+};
+
+// ── ONBOARDING SCREEN ────────────────────────────────────────────────────────
+const OnboardingScreen = ({ onComplete }) => {
+  const [step, setStep]         = useState(0); // 0=welcome, 1=name, 2=area
+  const [name, setName]         = useState("");
+  const [selectedArea, setArea] = useState(null);
+
+  return (
+    <div style={{ minHeight: "100vh", background: C.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: 28, maxWidth: 480, margin: "0 auto" }}>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono&display=swap" rel="stylesheet" />
+
+      {step === 0 && (
+        <div style={{ textAlign: "center", animation: "fadeIn 0.4s ease" }}>
+          <div style={{ fontSize: 56, marginBottom: 20 }}>🫀</div>
+          <div style={{ fontSize: 10, color: C.textTer, letterSpacing: "0.15em", fontFamily: "DM Mono, monospace", marginBottom: 12 }}>CHRONICALLY CURIOUS</div>
+          <div style={{ fontSize: 28, fontWeight: 700, color: C.textPri, lineHeight: 1.2, marginBottom: 14 }}>
+            Your body is telling<br />you something.
+          </div>
+          <div style={{ fontSize: 15, color: C.textSec, lineHeight: 1.6, marginBottom: 36 }}>
+            This app helps you listen — tracking the patterns between your pain, sleep, and daily habits so you can understand yourself better.
+          </div>
+          <button onClick={() => setStep(1)}
+            style={{ width: "100%", padding: 16, borderRadius: 14, background: C.pain, border: "none", color: "#fff", fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
+            Let's get started
+          </button>
+        </div>
+      )}
+
+      {step === 1 && (
+        <div style={{ width: "100%" }}>
+          <div style={{ fontSize: 24, fontWeight: 700, color: C.textPri, marginBottom: 8 }}>What should we call you?</div>
+          <div style={{ fontSize: 14, color: C.textSec, marginBottom: 28, lineHeight: 1.5 }}>
+            We'll use this to make the app feel a little more personal.
+          </div>
+          <input
+            value={name}
+            onChange={e => setName(e.target.value)}
+            placeholder="Your name"
+            autoFocus
+            style={{ width: "100%", background: C.card, border: "1.5px solid " + C.border, borderRadius: 12, color: C.textPri, fontSize: 18, padding: "14px 16px", marginBottom: 16, boxSizing: "border-box", fontFamily: "DM Sans, sans-serif" }}
+          />
+          <button onClick={() => { if (name.trim()) setStep(2); }}
+            style={{ width: "100%", padding: 16, borderRadius: 14, background: name.trim() ? C.pain : C.muted, border: "none", color: "#fff", fontSize: 16, fontWeight: 700, cursor: name.trim() ? "pointer" : "default" }}>
+            Continue
+          </button>
+        </div>
+      )}
+
+      {step === 2 && (
+        <div style={{ width: "100%" }}>
+          <div style={{ fontSize: 24, fontWeight: 700, color: C.textPri, marginBottom: 8 }}>
+            Hi {name.trim()} 👋
+          </div>
+          <div style={{ fontSize: 14, color: C.textSec, marginBottom: 24, lineHeight: 1.6 }}>
+            Where would you like to track pain? You can always add more areas later from Settings.
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
+            {BODY_AREAS.map(area => (
+              <button key={area.id} onClick={() => setArea(area.id)}
+                style={{ display: "flex", alignItems: "center", gap: 14, padding: "14px 16px", borderRadius: 14, border: "1.5px solid " + (selectedArea === area.id ? C.pain : C.border), background: selectedArea === area.id ? C.painBg : C.card, cursor: "pointer", textAlign: "left" }}>
+                <span style={{ fontSize: 26 }}>{area.icon}</span>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: selectedArea === area.id ? C.pain : C.textPri }}>{area.label}</div>
+                  <div style={{ fontSize: 12, color: C.textTer, marginTop: 2 }}>{area.desc}</div>
+                </div>
+              </button>
+            ))}
+          </div>
+          <button onClick={() => { if (selectedArea) onComplete(name.trim(), selectedArea); }}
+            style={{ width: "100%", padding: 16, borderRadius: 14, background: selectedArea ? C.pain : C.muted, border: "none", color: "#fff", fontSize: 16, fontWeight: 700, cursor: selectedArea ? "pointer" : "default" }}>
+            Start tracking
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── GREETING HELPERS ─────────────────────────────────────────────────────────
+const getGreeting = (name, data, trackers) => {
+  const hour = new Date().getHours();
+  const timeGreet = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yd = yesterday.toISOString().slice(0, 10);
+  const ydData = data[yd];
+
+  // Check yesterday's sleep
+  const sleep = ydData && ydData.sleep && ydData.sleep.main;
+  const sleepDuration = sleep && sleep.metrics && sleep.metrics.duration;
+  const wakeups = sleep && sleep.metrics && sleep.metrics.stay_asleep;
+
+  // Check yesterday's pain
+  const painEntry = ydData && ydData.back_pain;
+  const painSlots = painEntry ? ["Morning","Afternoon","Evening"].flatMap(s => (painEntry[s] && painEntry[s].painEntries) || []) : [];
+  const hadPain = painSlots.length > 0;
+  const worstPain = hadPain ? painSlots.reduce((a, b) => {
+    const ai = PAIN_LEVELS.findIndex(p => p.id === a.level);
+    const bi = PAIN_LEVELS.findIndex(p => p.id === b.level);
+    return bi > ai ? b : a;
+  }) : null;
+
+  // Compose message
+  let msg = timeGreet + (name ? ", " + name : "") + ".";
+
+  if (sleepDuration && parseFloat(sleepDuration) >= 7.5) {
+    msg += " Hope you're feeling well-rested this morning 🌿";
+  } else if (sleepDuration && parseFloat(sleepDuration) < 6) {
+    msg += " You logged a shorter night — be gentle with yourself today.";
+  } else if (wakeups && ["Three times","Four times","Five times","Six+ times"].includes(wakeups)) {
+    msg += " Looks like it was a broken night. Take it easy.";
+  } else if (worstPain && (worstPain.level === "severe" || worstPain.level === "moderate")) {
+    msg += " Yesterday was a tough one. Hope today's kinder to you.";
+  } else if (!ydData) {
+    msg += " Ready to start tracking your day?";
+  } else {
+    const encouragements = [
+      " Every entry helps you understand yourself better.",
+      " You're building something valuable — keep going.",
+      " Small data, big insights over time. 📈",
+      " Showing up for yourself today — that counts.",
+    ];
+    msg += encouragements[new Date().getDate() % encouragements.length];
+  }
+  return msg;
+};
+
+// ── WEEKLY REFLECTION ─────────────────────────────────────────────────────────
+const WeeklyReflection = ({ data }) => {
+  const [dismissed, setDismissed] = useState(false);
+
+  // Only show on Sundays (day 0) or if less than 7 days of data
+  const dayOfWeek = new Date().getDay();
+  if (dayOfWeek !== 0 || dismissed) return null;
+
+  // Build last 7 days of stats
+  const last7 = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (6 - i));
+    return d.toISOString().slice(0, 10);
+  });
+
+  const exerciseDays = last7.filter(d => data[d] && data[d].exercise && data[d].exercise.sessions && data[d].exercise.sessions.length > 0).length;
+
+  const painScores = last7.flatMap(d => {
+    const entry = data[d] && data[d].back_pain;
+    if (!entry) return [];
+    return ["Morning","Afternoon","Evening"].flatMap(s => ((entry[s] && entry[s].painEntries) || []).map(pe => PAIN_LEVELS.findIndex(p => p.id === pe.level)));
+  });
+  const avgPain = painScores.length ? (painScores.reduce((a,b) => a+b,0) / painScores.length).toFixed(1) : null;
+
+  const prevWeek = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(); d.setDate(d.getDate() - (13 - i));
+    return d.toISOString().slice(0, 10);
+  });
+  const prevPainScores = prevWeek.flatMap(d => {
+    const entry = data[d] && data[d].back_pain;
+    if (!entry) return [];
+    return ["Morning","Afternoon","Evening"].flatMap(s => ((entry[s] && entry[s].painEntries) || []).map(pe => PAIN_LEVELS.findIndex(p => p.id === pe.level)));
+  });
+  const prevAvgPain = prevPainScores.length ? prevPainScores.reduce((a,b) => a+b,0) / prevPainScores.length : null;
+
+  const loggingDays = last7.filter(d => data[d] && Object.keys(data[d]).length > 0).length;
+  if (loggingDays < 3) return null; // not enough data for a meaningful reflection
+
+  const painTrend = avgPain && prevAvgPain ? parseFloat(avgPain) - prevAvgPain : null;
+
+  return (
+    <div style={{ background: C.sleepBg, border: "1px solid " + C.sleep + "44", borderRadius: 14, padding: "14px 16px", margin: "0 0 10px" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: C.sleep }}>✨ Your week in review</div>
+        <button onClick={() => setDismissed(true)} style={{ background: "transparent", border: "none", color: C.textTer, fontSize: 16, cursor: "pointer", lineHeight: 1 }}>✕</button>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {avgPain !== null && (
+          <div style={{ fontSize: 13, color: C.textSec, lineHeight: 1.5 }}>
+            {painTrend !== null
+              ? painTrend < -0.3
+                ? "📉 Your average pain was lower than last week. Something's working — worth thinking about what changed."
+                : painTrend > 0.3
+                ? "📈 Pain was a little higher this week than last. Nothing to worry about, but maybe worth reflecting on."
+                : "〰 Your pain levels were pretty consistent week on week."
+              : "Average pain score this week: " + avgPain + " / 3."
+            }
+          </div>
+        )}
+        {exerciseDays > 0 && (
+          <div style={{ fontSize: 13, color: C.textSec, lineHeight: 1.5 }}>
+            🏃 You moved your body {exerciseDays} day{exerciseDays !== 1 ? "s" : ""} this week. {exerciseDays >= 4 ? "That's a solid week." : exerciseDays >= 2 ? "Every bit counts." : "A little goes a long way — even a walk."}
+          </div>
+        )}
+        <div style={{ fontSize: 13, color: C.textSec, lineHeight: 1.5 }}>
+          📋 You logged {loggingDays} out of 7 days. {loggingDays === 7 ? "Perfect week — your data is really building up. 🌱" : loggingDays >= 5 ? "Great consistency." : "Even partial data helps — keep going."}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ── APP ROOT ──────────────────────────────────────────────────────────────────
 export default function App() {
   const stored  = load();
   const [data,      setData]      = useState(stored.entries   || {});
   const [trackers,  setTrackers]  = useState(() => {
-    // Merge: use stored trackers if they exist (preserves user edits & custom trackers),
-    // but always re-apply the latest default definitions for built-in trackers
-    // so code changes (like pain level updates) propagate without wiping user data.
     if (!stored.trackers) return DEFAULT_TRACKERS;
     const storedById = Object.fromEntries(stored.trackers.map(t => [t.id, t]));
     const merged = DEFAULT_TRACKERS.map(def => {
       const s = storedById[def.id];
       if (!s) return def;
-      // keep user-modified label/icon/color/active/frequency, but for built-in types
-      // keep the default metrics so code updates (pain levels etc) take effect
       return { ...def, label: s.label, icon: s.icon, color: s.color, bg: s.bg || def.bg, active: s.active, frequency: s.frequency, times: s.times || def.times };
     });
-    // append any custom trackers the user added
     const customTrackers = stored.trackers.filter(t => !DEFAULT_TRACKERS.find(d => d.id === t.id));
     return [...merged, ...customTrackers];
   });
   const [reminders, setReminders] = useState(stored.reminders || {});
-  const [darkMode,  setDarkMode]  = useState(stored.darkMode !== false); // default dark
+  const [darkMode,  setDarkMode]  = useState(stored.darkMode !== false);
+  const [userName,  setUserName]  = useState(stored.userName  || "");
+  const [painArea,  setPainArea]  = useState(stored.painArea  || "");
+  const [onboarded, setOnboarded] = useState(!!stored.onboarded);
   const [tab,       setTab]       = useState("today");
   const [dateView,  setDateView]  = useState(today());
   const [modal,     setModal]     = useState(null);
   const [clearConf, setClearConf] = useState(false);
 
-  // Update the module-level C ref whenever darkMode changes
   C = makeTheme(darkMode);
 
-  useEffect(() => { save({ entries: data, trackers, reminders, darkMode }); }, [data, trackers, reminders, darkMode]);
+  useEffect(() => {
+    save({ entries: data, trackers, reminders, darkMode, userName, painArea, onboarded });
+  }, [data, trackers, reminders, darkMode, userName, painArea, onboarded]);
+
+  const handleOnboardingComplete = useCallback((name, area) => {
+    setUserName(name);
+    setPainArea(area);
+    setOnboarded(true);
+    // Update the pain tracker label and painArea
+    setTrackers(ts => ts.map(t =>
+      t.type === "pain_special"
+        ? { ...t, label: PAIN_AREA_LABELS[area] || "Pain", painArea: area }
+        : t
+    ));
+  }, []);
 
   const handleLog = useCallback((tracker, slot, existing, forceType) => {
     if (tracker.type === "pain_special" || forceType === "pain_summary") {
       if (forceType === "pain_summary") { setModal({ type: "pain_summary", tracker }); return; }
-      setModal({ type: "pain", tracker, slot: slot || "Morning", existing });
+      setModal({ type: "pain", tracker, slot: slot || "Morning", existing, painArea: tracker.painArea || "back" });
     } else if (tracker.id === "exercise" || forceType === "exercise") {
       setModal({ type: "exercise", tracker, existing });
     } else {
@@ -1717,53 +1970,56 @@ export default function App() {
     <div style={{ fontFamily: "'DM Sans', sans-serif", background: C.bg, minHeight: "100vh", display: "flex", flexDirection: "column", maxWidth: 480, margin: "0 auto", transition: "background 0.3s" }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Mono&display=swap" rel="stylesheet" />
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: "100vh", overflowX: "hidden" }}>
-        {tab === "today"    && <TodayPage    data={data} trackers={trackers} onLog={handleLog} date={dateView} setDate={setDateView} />}
-        {tab === "trends"   && <TrendsPage   data={data} trackers={trackers} />}
-        {tab === "history"  && <HistoryPage  data={data} trackers={trackers} />}
-        {tab === "settings" && <SettingsPage trackers={trackers} setTrackers={setTrackers} onExport={handleExport} onClear={handleClear} reminders={reminders} setReminders={setReminders} darkMode={darkMode} setDarkMode={setDarkMode} />}
-      </div>
+      {!onboarded ? (
+        <OnboardingScreen onComplete={handleOnboardingComplete} />
+      ) : (
+        <>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: "100vh", overflowX: "hidden" }}>
+          {tab === "today"    && <TodayPage    data={data} trackers={trackers} onLog={handleLog} date={dateView} setDate={setDateView} userName={userName} />}
+          {tab === "trends"   && <TrendsPage   data={data} trackers={trackers} />}
+          {tab === "history"  && <HistoryPage  data={data} trackers={trackers} />}
+          {tab === "settings" && <SettingsPage trackers={trackers} setTrackers={setTrackers} onExport={handleExport} onClear={handleClear} reminders={reminders} setReminders={setReminders} darkMode={darkMode} setDarkMode={setDarkMode} />}
+        </div>
 
-      {/* bottom nav */}
-      <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: C.surface, borderTop: "1px solid " + C.border, display: "flex", zIndex: 50 }}>
-        {TABS.map(t => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            style={{ flex: 1, padding: "10px 0 14px", background: "transparent", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-            <span style={{ fontSize: 20 }}>{t.icon}</span>
-            <span style={{ fontSize: 10, color: tab === t.id ? C.screen : C.textTer, fontWeight: tab === t.id ? 700 : 400 }}>{t.label}</span>
-            {tab === t.id && <div style={{ width: 20, height: 2, borderRadius: 1, background: C.screen }} />}
-          </button>
-        ))}
-      </div>
+        <div style={{ position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)", width: "100%", maxWidth: 480, background: C.surface, borderTop: "1px solid " + C.border, display: "flex", zIndex: 50 }}>
+          {TABS.map(t => (
+            <button key={t.id} onClick={() => setTab(t.id)}
+              style={{ flex: 1, padding: "10px 0 14px", background: "transparent", border: "none", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+              <span style={{ fontSize: 20 }}>{t.icon}</span>
+              <span style={{ fontSize: 10, color: tab === t.id ? C.screen : C.textTer, fontWeight: tab === t.id ? 700 : 400 }}>{t.label}</span>
+              {tab === t.id && <div style={{ width: 20, height: 2, borderRadius: 1, background: C.screen }} />}
+            </button>
+          ))}
+        </div>
 
-      {/* modals */}
-      {modal && modal.type === "exercise" && (
-        <ExerciseModal existing={modal.existing} onSave={handleSaveExercise} onClose={() => setModal(null)} />
-      )}
-      {modal && modal.type === "pain" && (
-        <PainModal slot={modal.slot} existing={modal.existing} onSave={handleSavePain} onClose={() => setModal(null)} />
-      )}
-      {modal && modal.type === "pain_summary" && (
-        <PainSummaryModal tracker={modal.tracker} dayData={data[dateView] || {}}
-          onLogSlot={(slot, existing) => setModal({ type: "pain", tracker: modal.tracker, slot, existing })}
-          onClose={() => setModal(null)} />
-      )}
-      {modal && modal.type === "generic" && (
-        <LogModal tracker={modal.tracker} slot={modal.slot} existing={modal.existing} onSave={handleSaveGeneric} onClose={() => setModal(null)} />
-      )}
+        {modal && modal.type === "exercise" && (
+          <ExerciseModal existing={modal.existing} onSave={handleSaveExercise} onClose={() => setModal(null)} />
+        )}
+        {modal && modal.type === "pain" && (
+          <PainModal slot={modal.slot} existing={modal.existing} painArea={modal.painArea} onSave={handleSavePain} onClose={() => setModal(null)} />
+        )}
+        {modal && modal.type === "pain_summary" && (
+          <PainSummaryModal tracker={modal.tracker} dayData={data[dateView] || {}}
+            onLogSlot={(slot, existing) => setModal({ type: "pain", tracker: modal.tracker, slot, existing, painArea: modal.tracker.painArea || "back" })}
+            onClose={() => setModal(null)} />
+        )}
+        {modal && modal.type === "generic" && (
+          <LogModal tracker={modal.tracker} slot={modal.slot} existing={modal.existing} onSave={handleSaveGeneric} onClose={() => setModal(null)} />
+        )}
 
-      {/* delete confirm */}
-      {clearConf && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
-          <div style={{ background: C.card, borderRadius: 16, padding: 24, maxWidth: 320, width: "100%" }}>
-            <div style={{ fontSize: 15, fontWeight: 700, color: C.textPri, marginBottom: 8 }}>Delete all data?</div>
-            <div style={{ fontSize: 13, color: C.textSec, marginBottom: 20 }}>This permanently erases all logged entries. Cannot be undone.</div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <button onClick={handleClear} style={{ flex: 1, padding: 12, borderRadius: 10, background: C.danger, border: "none", color: "#fff", fontSize: 14, cursor: "pointer", fontWeight: 700 }}>Delete everything</button>
-              <button onClick={() => setClearConf(false)} style={{ flex: 1, padding: 12, borderRadius: 10, background: C.card, border: "1px solid " + C.border, color: C.textSec, fontSize: 14, cursor: "pointer" }}>Cancel</button>
+        {clearConf && (
+          <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 200, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}>
+            <div style={{ background: C.card, borderRadius: 16, padding: 24, maxWidth: 320, width: "100%" }}>
+              <div style={{ fontSize: 15, fontWeight: 700, color: C.textPri, marginBottom: 8 }}>Delete all data?</div>
+              <div style={{ fontSize: 13, color: C.textSec, marginBottom: 20 }}>This permanently erases all logged entries. Cannot be undone.</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button onClick={handleClear} style={{ flex: 1, padding: 12, borderRadius: 10, background: C.danger, border: "none", color: "#fff", fontSize: 14, cursor: "pointer", fontWeight: 700 }}>Delete everything</button>
+                <button onClick={() => setClearConf(false)} style={{ flex: 1, padding: 12, borderRadius: 10, background: C.card, border: "1px solid " + C.border, color: C.textSec, fontSize: 14, cursor: "pointer" }}>Cancel</button>
+              </div>
             </div>
           </div>
-        </div>
+        )}
+        </>
       )}
     </div>
     </ThemeContext.Provider>
